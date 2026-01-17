@@ -1,0 +1,24 @@
+trading_rules:
+  BTC_GBP:
+    price_tick: 0.1
+    quantity_step: 0.00001
+    min_half_spread: 2.50
+    max_order_notional: 5.00
+
+  SOL_GBP:
+    price_tick: 0.01
+    quantity_step: 0.01
+    min_half_spread: 0.01
+    max_order_notional: 5.00
+
+  BTC_USD:
+    price_tick: 0.1
+    quantity_step: 0.00001
+    min_half_spread: 2.50
+    max_order_notional: 5.00
+
+  SOL_USD:
+    price_tick: 0.01
+    quantity_step: 0.01
+    min_half_spread: 0.01
+    max_order_notional: 5.00
