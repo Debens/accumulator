@@ -21,12 +21,17 @@ impl MinIntervalPolicy {
 impl SchedulePolicy for MinIntervalPolicy {
     fn should_evaluate(&mut self, ctx: &ScheduleContext<'_>) -> Option<SkipReason> {
         if let Some(last) = self.last_eval {
-            if ctx.now.duration_since(last) < self.min_interval {
-                return Some(SkipReason::TooSoon);
+            let duration_since_last = ctx.now.duration_since(last);
+            if duration_since_last < self.min_interval {
+                return Some(SkipReason::TooSoon {
+                    duration_since_last,
+                });
             }
         }
 
-        self.last_eval = Some(ctx.now);
+        if ctx.order_manager.has_live_orders() || ctx.order_manager.has_inflight_actions() {
+            self.last_eval = Some(ctx.now);
+        }
 
         None
     }

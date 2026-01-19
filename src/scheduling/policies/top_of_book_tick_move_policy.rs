@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use crate::scheduling::{
     schedule_context::ScheduleContext, schedule_policy::SchedulePolicy, types::SkipReason,
 };
@@ -5,6 +7,8 @@ use crate::scheduling::{
 pub struct TopOfBookTickMovePolicy {
     min_ticks: f64,
     last_best: Option<(f64, f64)>,
+    last_eval: Option<Instant>,
+    pub max_stale: Duration,
 }
 
 impl TopOfBookTickMovePolicy {
@@ -12,6 +16,8 @@ impl TopOfBookTickMovePolicy {
         Self {
             min_ticks,
             last_best: None,
+            last_eval: None,
+            max_stale: Duration::from_secs(1),
         }
     }
 }
@@ -21,7 +27,7 @@ impl SchedulePolicy for TopOfBookTickMovePolicy {
         let (best_bid, best_ask) =
             match ctx.market_state.best_bid().zip(ctx.market_state.best_ask()) {
                 Some((b, a)) => (b.as_f64(), a.as_f64()),
-                None => return Some(SkipReason::NoMeaningfulChange), // or a dedicated "NoBook"
+                None => return Some(SkipReason::NoBook),
             };
 
         let tick = ctx.instrument.trading_rules().price_tick;
@@ -34,12 +40,24 @@ impl SchedulePolicy for TopOfBookTickMovePolicy {
             None => true,
         };
 
-        self.last_best = Some((best_bid, best_ask));
+        let now = ctx.now;
 
         if moved {
-            None
+            self.last_best = Some((best_bid, best_ask));
+            self.last_eval = Some(now);
+            return None;
+        }
+
+        if let Some(last_eval) = self.last_eval {
+            if now.duration_since(last_eval) >= self.max_stale {
+                self.last_eval = Some(now);
+                return None;
+            } else {
+                return Some(SkipReason::NoMeaningfulChange);
+            }
         } else {
-            Some(SkipReason::NoMeaningfulChange)
+            self.last_eval = Some(now);
+            return None;
         }
     }
 }

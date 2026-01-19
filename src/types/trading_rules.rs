@@ -1,6 +1,6 @@
 use crate::types::price::Price;
 
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -68,6 +68,7 @@ fn round_down_to_step(value: f64, step: f64) -> f64 {
     if step <= 0.0 || !value.is_finite() || !step.is_finite() {
         return value;
     }
+
     (value / step).floor() * step
 }
 

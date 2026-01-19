@@ -6,6 +6,7 @@ use crate::{
         order_action::{OrderAction, Side},
         order_report::OrderReport,
         order_side_manager::{OrderSideManager, SideInputs},
+        types::OrderSideState,
     },
     types::{instrument::Instrument, quote_target::QuoteTarget},
 };
@@ -29,6 +30,11 @@ impl OrderManager {
     pub fn on_report(&mut self, report: OrderReport) {
         self.bid_side.on_report(&report);
         self.ask_side.on_report(&report);
+    }
+
+    pub fn has_live_orders(&self) -> bool {
+        matches!(self.bid_side.state(), OrderSideState::Live { .. })
+            || matches!(self.ask_side.state(), OrderSideState::Live { .. })
     }
 
     pub fn has_inflight_actions(&self) -> bool {

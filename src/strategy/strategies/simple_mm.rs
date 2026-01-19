@@ -100,14 +100,14 @@ impl Strategy for SimpleMarketMakerStrategy {
         if !too_long && fair_bias > 0.0 && can_improve {
             desired_bid = best_bid + tick;
         }
-        desired_bid = self.clamp_post_only_bid(desired_bid, best_ask);
+        desired_bid = self.clamp_bid(desired_bid, best_ask);
 
         // Desired ask:
         let mut desired_ask = best_ask;
         if !too_short && fair_bias < 0.0 && can_improve {
             desired_ask = best_ask - tick;
         }
-        desired_ask = self.clamp_post_only_ask(desired_ask, best_bid);
+        desired_ask = self.clamp_ask(desired_ask, best_bid);
 
         // Optional: enforce a minimum half-spread away from skewed fair *only if it doesn't make you uncompetitive*.
         let half_spread_floor = self.ctx().min_half_spread();
@@ -115,10 +115,10 @@ impl Strategy for SimpleMarketMakerStrategy {
         let ask_floor_from_fair = skewed_fair + half_spread_floor;
 
         desired_bid = desired_bid.max(bid_floor_from_fair);
-        desired_bid = self.clamp_post_only_bid(desired_bid, best_ask);
+        desired_bid = self.clamp_bid(desired_bid, best_ask);
 
         desired_ask = desired_ask.min(ask_floor_from_fair);
-        desired_ask = self.clamp_post_only_ask(desired_ask, best_bid);
+        desired_ask = self.clamp_ask(desired_ask, best_bid);
 
         // Sanity: if tick/book is weird, ensure post-only invariants still hold.
         if desired_bid > best_ask - tick || desired_ask < best_bid + tick {

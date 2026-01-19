@@ -23,16 +23,12 @@ pub trait StrategyHelpers: WithContext {
         (q > 0.0).then_some(q)
     }
 
-    fn clamp_post_only_bid(&self, bid: f64, best_ask: f64) -> f64 {
+    fn clamp_bid(&self, bid: f64, best_ask: f64) -> f64 {
         bid.min(best_ask - self.ctx().tick())
     }
 
-    fn clamp_post_only_ask(&self, ask: f64, best_bid: f64) -> f64 {
+    fn clamp_ask(&self, ask: f64, best_bid: f64) -> f64 {
         ask.max(best_bid + self.ctx().tick())
-    }
-
-    fn round_price(&self, price: f64) -> f64 {
-        self.ctx().rules().round_price_to_tick(price).as_f64()
     }
 }
 

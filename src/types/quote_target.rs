@@ -14,7 +14,7 @@ pub enum NoQuoteReason {
     MissingEma,
     BelowEntryThreshold {
         deviation_ticks: f64,
-        threshold_bps: f64,
+        threshold_ticks: f64,
     },
     TooLongExposure {
         exposure_quote: f64,

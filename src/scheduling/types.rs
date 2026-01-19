@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[derive(Debug, Clone, Copy)]
 pub enum ScheduleDecision {
     Evaluate,
@@ -6,7 +8,8 @@ pub enum ScheduleDecision {
 
 #[derive(Debug, Clone, Copy)]
 pub enum SkipReason {
-    TooSoon,
+    TooSoon { duration_since_last: Duration },
     NoMeaningfulChange,
+    NoBook,
     InFlight,
 }
