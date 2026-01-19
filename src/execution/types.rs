@@ -4,9 +4,18 @@ use crate::types::quote::Quote;
 pub enum SidePlan {
     NoAction,
     WaitForVenue,
-    Place { order_id: String, desired: Quote },
-    Cancel { order_id: String },
-    Replace { order_id: String, desired: Quote },
+    Place {
+        order_id: String,
+        desired: Quote,
+    },
+    Cancel {
+        order_id: String,
+    },
+    Replace {
+        old_order_id: String,
+        new_order_id: String,
+        desired: Quote,
+    },
 }
 
 #[derive(Debug, Clone)]

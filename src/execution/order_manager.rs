@@ -39,9 +39,9 @@ impl OrderManager {
         &mut self,
         instrument: &Instrument,
         target: &QuoteTarget,
+        now: Instant,
     ) -> Result<Vec<OrderAction>> {
         let price_tick = instrument.trading_rules().price_tick;
-        let now = Instant::now();
 
         let mut actions = Vec::new();
 

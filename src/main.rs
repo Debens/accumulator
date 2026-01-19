@@ -156,7 +156,7 @@ async fn main() -> Result<()> {
                 market_state.on_market_event(&event);
                 signal_state.update(&market_state, now);
 
-                let scheduler_contexst = ScheduleContext {
+                let scheduler_context = ScheduleContext {
                     now,
                     instrument: &instrument,
                     market_state: &market_state,
@@ -164,10 +164,10 @@ async fn main() -> Result<()> {
                     order_manager: &order_manager,
                 };
 
-                match quote_scheduler.decide(&scheduler_contexst) {
+                match quote_scheduler.decide(&scheduler_context) {
                     ScheduleDecision::Evaluate => {}
                     ScheduleDecision::Skip(reason) => {
-                        warn!(?reason, "scheduling decision");
+                        warn!(?reason, "scheduling skipped");
 
                         continue;
                     }
@@ -189,7 +189,7 @@ async fn main() -> Result<()> {
                         match risk_engine.evaluate(&context, target.clone()) {
                             RiskDecision::Approved(approved_target) => {
                                 let actions = order_manager
-                                    .actions_for_target(&instrument, &approved_target)
+                                    .actions_for_target(&instrument, &approved_target, now)
                                     .await?;
 
                                 if !actions.is_empty() {

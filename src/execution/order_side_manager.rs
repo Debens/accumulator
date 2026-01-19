@@ -244,7 +244,8 @@ impl OrderSideManager {
             (Live { order_id, resting }, Some(desired)) => {
                 if self.is_stale(&resting, &desired, inputs.now, inputs.price_tick) {
                     Replace {
-                        order_id: order_id.clone(),
+                        old_order_id: order_id.clone(),
+                        new_order_id: generate_order_id(inputs.instrument, self.side),
                         desired,
                     }
                 } else {
@@ -294,10 +295,13 @@ impl OrderSideManager {
                 actions.push(self.place_action(order_id.clone(), instrument, desired))
             }
             Cancel { order_id } => actions.push(self.cancel_action(order_id.clone(), instrument)),
-            Replace { order_id, desired } => {
-                actions.push(self.cancel_action(order_id.clone(), instrument));
-                let new_order_id: String = generate_order_id(instrument, self.side);
-                actions.push(self.place_action(new_order_id, instrument, desired));
+            Replace {
+                old_order_id,
+                new_order_id,
+                desired,
+            } => {
+                actions.push(self.cancel_action(old_order_id.clone(), instrument));
+                actions.push(self.place_action(new_order_id.clone(), instrument, desired));
             }
         }
 
@@ -347,9 +351,16 @@ impl OrderSideManager {
             }
 
             // keep your existing “cancel + place immediately” behavior
-            (_, SidePlan::Replace { order_id, desired }) => {
+            (
+                _,
+                SidePlan::Replace {
+                    new_order_id,
+                    desired,
+                    ..
+                },
+            ) => {
                 self.state = OrderSideState::Placing {
-                    order_id,
+                    order_id: new_order_id,
                     requested: desired,
                 };
                 self.last_update = Some(now);
