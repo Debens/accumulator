@@ -5,3 +5,26 @@ pub struct QuoteTarget {
     pub bid: Option<Quote>,
     pub ask: Option<Quote>,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub enum NoQuoteReason {
+    MissingTopOfBook,
+    MissingFairPrice,
+    MissingMid,
+    MissingEma,
+    BelowEntryThreshold {
+        deviation_ticks: f64,
+        threshold_bps: f64,
+    },
+    TooLongExposure {
+        exposure_quote: f64,
+        max_exposure_quote: f64,
+    },
+    TooShortExposure {
+        exposure_quote: f64,
+        max_exposure_quote: f64,
+    },
+    InvalidQuantity,
+    WouldCrossPostOnly,
+    BothSidesSuppressedByExposure,
+}

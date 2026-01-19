@@ -4,11 +4,12 @@ use crate::{
     execution::{ExecutionVenue, ReportSender, dry_run::DryRunExecutionVenue},
     kraken::{kraken_config::KrakenConfig, kraken_venue::KrakenExecutionVenue},
     scenario::{strategies::StrategyKind, venues::VenueKind},
+    signals::signal_state::SignalState,
     strategy::{
-        Strategy,
         strategies::{
             mean_reversion::MakerOnlyMeanReversionStrategy, simple_mm::SimpleMarketMakerStrategy,
         },
+        strategy::Strategy,
     },
     types::instrument::Instrument,
 };
@@ -43,6 +44,13 @@ impl Scenario {
             StrategyKind::MeanReversion => {
                 Box::new(MakerOnlyMeanReversionStrategy::for_instrument(instrument))
             }
+        }
+    }
+
+    pub fn signals(kind: StrategyKind) -> SignalState {
+        match kind {
+            StrategyKind::SimpleMarketMaker => SignalState::new(3.0),
+            StrategyKind::MeanReversion => SignalState::new(60.0),
         }
     }
 }

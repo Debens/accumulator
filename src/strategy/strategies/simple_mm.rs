@@ -2,12 +2,15 @@ use crate::{
     market::market_state::MarketState,
     signals::signal_state::SignalState,
     strategy::{
-        Strategy,
         instrument_context::{InstrumentContext, WithContext},
+        strategy::Strategy,
         strategy_helpers::StrategyHelpers,
     },
     types::{
-        instrument::Instrument, inventory::Inventory, quote::Quote, quote_target::QuoteTarget,
+        instrument::Instrument,
+        inventory::Inventory,
+        quote::Quote,
+        quote_target::{NoQuoteReason, QuoteTarget},
     },
 };
 
@@ -44,13 +47,16 @@ impl Strategy for SimpleMarketMakerStrategy {
         market_state: &MarketState,
         signal_state: &SignalState,
         inventory: Inventory,
-    ) -> Option<QuoteTarget> {
-        let (best_bid, best_ask) = Self::best_bid_ask(market_state)?;
+    ) -> Result<QuoteTarget, crate::types::quote_target::NoQuoteReason> {
+        let (best_bid, best_ask) =
+            Self::best_bid_ask(market_state).ok_or(NoQuoteReason::MissingTopOfBook)?;
+
         let rules = self.ctx().rules();
         let tick = self.ctx().tick();
 
         // Fair price: EMA(mid) preferred, fallback to raw mid.
-        let fair = Self::fair_price(market_state, signal_state)?;
+        let fair =
+            Self::fair_price(market_state, signal_state).ok_or(NoQuoteReason::MissingFairPrice)?;
 
         // ----- inventory-aware fair price -----
         let exposure_quote = inventory.base * fair;
@@ -65,14 +71,22 @@ impl Strategy for SimpleMarketMakerStrategy {
         let skewed_fair = fair - skew;
 
         // ----- size (quote currency notional cap) -----
-        let order_quantity = self.size_from_notional(skewed_fair)?;
+        let order_quantity = self
+            .size_from_notional(skewed_fair)
+            .ok_or(NoQuoteReason::InvalidQuantity)?;
         if order_quantity <= 0.0 {
-            return None;
+            return Err(NoQuoteReason::InvalidQuantity);
         }
 
         // ----- one-sided quoting if exposure is too large -----
         let too_long = exposure_quote > self.max_exposure_quote;
         let too_short = exposure_quote < -self.max_exposure_quote;
+
+        // If you prefer hard-stop reasons (instead of just suppressing one side),
+        // you can return these immediately:
+        //
+        // if too_long { return Err(NoQuoteReason::TooLongExposure { exposure_quote, max_exposure_quote: self.max_exposure_quote }); }
+        // if too_short { return Err(NoQuoteReason::TooShortExposure { exposure_quote, max_exposure_quote: self.max_exposure_quote }); }
 
         // ----- price selection: quote at/near the touch -----
         let spread = best_ask - best_bid;
@@ -82,9 +96,6 @@ impl Strategy for SimpleMarketMakerStrategy {
         let fair_bias = (skewed_fair - mid).signum(); // -1 sell bias, +1 buy bias, 0 neutral
 
         // Desired bid:
-        // - default join best_bid
-        // - if buy-biased and can improve: best_bid + 1 tick
-        // - always remain post-only: bid <= best_ask - tick
         let mut desired_bid = best_bid;
         if !too_long && fair_bias > 0.0 && can_improve {
             desired_bid = best_bid + tick;
@@ -92,9 +103,6 @@ impl Strategy for SimpleMarketMakerStrategy {
         desired_bid = self.clamp_post_only_bid(desired_bid, best_ask);
 
         // Desired ask:
-        // - default join best_ask
-        // - if sell-biased and can improve: best_ask - 1 tick
-        // - always remain post-only: ask >= best_bid + tick
         let mut desired_ask = best_ask;
         if !too_short && fair_bias < 0.0 && can_improve {
             desired_ask = best_ask - tick;
@@ -102,18 +110,20 @@ impl Strategy for SimpleMarketMakerStrategy {
         desired_ask = self.clamp_post_only_ask(desired_ask, best_bid);
 
         // Optional: enforce a minimum half-spread away from skewed fair *only if it doesn't make you uncompetitive*.
-        // Example: if min_half_spread is huge (0.10) but touch spread is 0.01, we ignore it.
         let half_spread_floor = self.ctx().min_half_spread();
         let bid_floor_from_fair = skewed_fair - half_spread_floor;
         let ask_floor_from_fair = skewed_fair + half_spread_floor;
 
-        // Only apply the floor if it doesn't move us *away* from the touch.
-        // (Bid: raising it toward fair is ok if still post-only; Ask: lowering it toward fair is ok if still post-only.)
         desired_bid = desired_bid.max(bid_floor_from_fair);
         desired_bid = self.clamp_post_only_bid(desired_bid, best_ask);
 
         desired_ask = desired_ask.min(ask_floor_from_fair);
         desired_ask = self.clamp_post_only_ask(desired_ask, best_bid);
+
+        // Sanity: if tick/book is weird, ensure post-only invariants still hold.
+        if desired_bid > best_ask - tick || desired_ask < best_bid + tick {
+            return Err(NoQuoteReason::WouldCrossPostOnly);
+        }
 
         let bid_price = rules.round_price_to_tick(desired_bid);
         let ask_price = rules.round_price_to_tick(desired_ask);
@@ -137,9 +147,12 @@ impl Strategy for SimpleMarketMakerStrategy {
         };
 
         if bid.is_none() && ask.is_none() {
-            return None;
+            // If you want a more specific reason, you can split this into:
+            // - too_long && too_short (shouldn't happen)
+            // - etc
+            return Err(NoQuoteReason::BothSidesSuppressedByExposure);
         }
 
-        Some(QuoteTarget { bid, ask })
+        Ok(QuoteTarget { bid, ask })
     }
 }

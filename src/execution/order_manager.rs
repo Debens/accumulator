@@ -31,6 +31,10 @@ impl OrderManager {
         self.ask_side.on_report(&report);
     }
 
+    pub fn has_inflight_actions(&self) -> bool {
+        self.bid_side.has_inflight_actions() || self.ask_side.has_inflight_actions()
+    }
+
     pub async fn actions_for_target(
         &mut self,
         instrument: &Instrument,

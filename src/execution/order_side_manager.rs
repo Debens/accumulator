@@ -65,6 +65,15 @@ pub struct OrderSideManager {
 }
 
 impl OrderSideManager {
+    pub fn has_inflight_actions(&self) -> bool {
+        match &self.state {
+            OrderSideState::Placing { .. } => true,
+            OrderSideState::Cancelling { .. } => true,
+            OrderSideState::Live { .. } => false,
+            OrderSideState::NoOrder => false,
+        }
+    }
+
     pub fn for_side(side: Side) -> Self {
         Self {
             side,

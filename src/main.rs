@@ -5,6 +5,7 @@ mod kraken;
 mod market;
 mod risk;
 mod scenario;
+mod scheduling;
 mod signals;
 mod strategy;
 mod types;
@@ -35,7 +36,12 @@ use crate::risk::engine::RiskEngine;
 use crate::scenario::scenario::Scenario;
 use crate::scenario::strategies::StrategyKind;
 use crate::scenario::venues::VenueKind;
-use crate::signals::signal_state::SignalState;
+use crate::scheduling::policies::in_flight_policy::InFlightPolicy;
+use crate::scheduling::policies::min_interval_policy::MinIntervalPolicy;
+use crate::scheduling::policies::top_of_book_tick_move_policy::TopOfBookTickMovePolicy;
+use crate::scheduling::quote_scheduler::QuoteScheduler;
+use crate::scheduling::schedule_context::ScheduleContext;
+use crate::scheduling::types::ScheduleDecision;
 use crate::types::instrument::Instrument;
 
 const STARTUP_ACTIONS: &[OrderAction] = &[OrderAction::CancelAll];
@@ -120,7 +126,13 @@ async fn main() -> Result<()> {
     ]);
 
     let mut market_state = MarketState::new();
-    let mut signal_state = SignalState::new(3.0);
+    let mut signal_state = Scenario::signals(args.strategy);
+
+    let mut quote_scheduler = QuoteScheduler::new(vec![
+        Box::new(InFlightPolicy),
+        Box::new(TopOfBookTickMovePolicy::new(1.0)),
+        Box::new(MinIntervalPolicy::new(Duration::from_millis(200))),
+    ]);
 
     loop {
         tokio::select! {
@@ -138,42 +150,64 @@ async fn main() -> Result<()> {
             }
 
             Some(event) = market_event_receiver.recv() => {
+                tracing::debug!(?event);
                 let now = Instant::now();
 
                 market_state.on_market_event(&event);
                 signal_state.update(&market_state, now);
 
+                let scheduler_contexst = ScheduleContext {
+                    now,
+                    instrument: &instrument,
+                    market_state: &market_state,
+                    signal_state: &signal_state,
+                    order_manager: &order_manager,
+                };
+
+                match quote_scheduler.decide(&scheduler_contexst) {
+                    ScheduleDecision::Evaluate => {}
+                    ScheduleDecision::Skip(reason) => {
+                        warn!(?reason, "scheduling decision");
+
+                        continue;
+                    }
+                }
+
                 let inventory = *inventory_source.borrow();
 
-                if let Some(target) = strategy.compute_target(&market_state, &signal_state, inventory) {
-                    let context = RiskContext {
-                        instrument: &instrument,
-                        market_state: &market_state,
-                        target: &target,
-                        now,
-                    };
+                let target_result = strategy.compute_target(&market_state, &signal_state, inventory);
+                match target_result {
+                    Err(reason) => warn!(?reason),
+                    Ok(target) => {
+                        let context = RiskContext {
+                            instrument: &instrument,
+                            market_state: &market_state,
+                            target: &target,
+                            now,
+                        };
 
-                    match risk_engine.evaluate(&context, target.clone()) {
-                        RiskDecision::Approved(approved_target) => {
-                            let actions = order_manager
-                                .actions_for_target(&instrument, &approved_target)
-                                .await?;
+                        match risk_engine.evaluate(&context, target.clone()) {
+                            RiskDecision::Approved(approved_target) => {
+                                let actions = order_manager
+                                    .actions_for_target(&instrument, &approved_target)
+                                    .await?;
 
-                            if !actions.is_empty() {
-                                venue.execute(&actions).await?;
+                                if !actions.is_empty() {
+                                    venue.execute(&actions).await?;
+                                }
                             }
-                        }
-                        RiskDecision::Hold(hold) => {
-                            info!(reasons = ?hold.reasons, "throttling actions");
-                        }
-                        RiskDecision::Rejected(rejection) => {
-                            warn!(
-                                reasons = ?rejection.reasons,
-                                required_actions = ?rejection.required_actions,
-                                "risk rejected quote target"
-                            );
+                            RiskDecision::Hold(hold) => {
+                                info!(reasons = ?hold.reasons, "throttling actions");
+                            }
+                            RiskDecision::Rejected(rejection) => {
+                                warn!(
+                                    reasons = ?rejection.reasons,
+                                    required_actions = ?rejection.required_actions,
+                                    "risk rejected quote target"
+                                );
 
-                            venue.execute(&rejection.required_actions).await?;
+                                venue.execute(&rejection.required_actions).await?;
+                            }
                         }
                     }
                 }
