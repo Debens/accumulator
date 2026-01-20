@@ -99,11 +99,15 @@ async fn main() -> Result<()> {
         let instrument = instrument.clone();
         let kraken_source = KrakenMarket::default();
         async move {
-            if let Err(error) = kraken_source
-                .subscribe(&instrument, market_event_sender)
-                .await
-            {
-                error!("KrakenMarket stopped with error: {error:?}");
+            loop {
+                if let Err(error) = kraken_source
+                    .subscribe(&instrument, market_event_sender.clone())
+                    .await
+                {
+                    error!("KrakenMarket stopped with error: {error:?}");
+                }
+
+                tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
     });
