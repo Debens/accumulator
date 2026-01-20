@@ -37,7 +37,7 @@ impl MakerOnlyMeanReversionStrategy {
         Self {
             ctx: InstrumentContext::new(instrument),
             max_exposure_quote: 100.0,
-            entry_threshold_ticks: 1.0,
+            entry_threshold_ticks: 3.0,
             improve_if_possible: true,
         }
     }
@@ -111,6 +111,14 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
                 return Err(NoQuoteReason::WouldCrossPostOnly);
             }
 
+            if desired_ask < inventory.base {
+                return Err(NoQuoteReason::InsufficientInventory {
+                    asset: self.ctx().instrument.base().to_string(),
+                    required: desired_ask,
+                    available: inventory.base,
+                });
+            }
+
             Ok(QuoteTarget {
                 bid: None,
                 ask: Some(Quote {
@@ -136,6 +144,14 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
 
             if desired_bid > best_ask - tick {
                 return Err(NoQuoteReason::WouldCrossPostOnly);
+            }
+
+            if desired_bid > inventory.quote {
+                return Err(NoQuoteReason::InsufficientInventory {
+                    asset: self.ctx().instrument.quote().to_string(),
+                    required: desired_bid,
+                    available: inventory.quote,
+                });
             }
 
             Ok(QuoteTarget {

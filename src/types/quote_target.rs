@@ -6,12 +6,17 @@ pub struct QuoteTarget {
     pub ask: Option<Quote>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum NoQuoteReason {
     MissingTopOfBook,
     MissingFairPrice,
     MissingMid,
     MissingEma,
+    InsufficientInventory {
+        asset: String,
+        required: f64,
+        available: f64,
+    },
     BelowEntryThreshold {
         deviation_ticks: f64,
         threshold_ticks: f64,

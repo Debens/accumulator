@@ -160,7 +160,6 @@ async fn main() -> Result<()> {
                     now,
                     instrument: &instrument,
                     market_state: &market_state,
-                    signal_state: &signal_state,
                     order_manager: &order_manager,
                 };
 
