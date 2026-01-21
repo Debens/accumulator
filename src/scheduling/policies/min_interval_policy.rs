@@ -34,7 +34,7 @@ impl MinIntervalPolicy {
         }
     }
 
-    pub fn subscribe(&self, mut receiver: broadcast::Receiver<OrderReport>) {
+    pub fn on_report(&self, mut receiver: broadcast::Receiver<OrderReport>) {
         let last_eval = Arc::clone(&self.last_order);
 
         tokio::spawn(async move {

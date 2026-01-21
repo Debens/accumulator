@@ -6,6 +6,15 @@ pub struct QuoteTarget {
     pub ask: Option<Quote>,
 }
 
+impl QuoteTarget {
+    pub fn none() -> Self {
+        Self {
+            bid: None,
+            ask: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum NoQuoteReason {
     MissingTopOfBook,

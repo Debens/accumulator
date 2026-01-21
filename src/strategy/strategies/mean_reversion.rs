@@ -112,11 +112,8 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
             }
 
             if quantity > inventory.base {
-                return Err(NoQuoteReason::InsufficientInventory {
-                    asset: self.ctx().instrument.base().to_string(),
-                    required: quantity,
-                    available: inventory.base,
-                });
+                tracing::warn!(required = ?quantity, available = ?inventory.base, "insufficient inventory");
+                return Ok(QuoteTarget::none());
             }
 
             Ok(QuoteTarget {
@@ -148,11 +145,8 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
 
             let notional = quantity * ema;
             if notional > inventory.quote {
-                return Err(NoQuoteReason::InsufficientInventory {
-                    asset: self.ctx().instrument.quote().to_string(),
-                    required: notional,
-                    available: inventory.quote,
-                });
+                tracing::warn!(required = ?notional, available = ?inventory.quote, "insufficient inventory");
+                return Ok(QuoteTarget::none());
             }
 
             Ok(QuoteTarget {

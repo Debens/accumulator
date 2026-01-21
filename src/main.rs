@@ -136,7 +136,7 @@ async fn main() -> Result<()> {
     let mut signal_state = Scenario::signals(args.strategy);
 
     let min_interval_policy = MinIntervalPolicy::new(Duration::from_millis(200));
-    min_interval_policy.subscribe(order_report_sender.subscribe());
+    min_interval_policy.on_report(order_report_sender.subscribe());
 
     let mut quote_scheduler = QuoteScheduler::new(vec![
         Box::new(InFlightPolicy),
