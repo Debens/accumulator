@@ -50,7 +50,7 @@ impl MakerOnlyMeanReversionStrategy {
             entry_threshold_ticks: 3.0,
             improve_if_possible: true,
             trend_filter_ticks: 2.0,
-            counter_trend_multiplier: 2.0,
+            counter_trend_multiplier: 1.5,
             inventory_penalty: 1.0,
         }
     }

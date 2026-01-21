@@ -33,6 +33,9 @@ pub struct MakerOnlyTrendFollowingStrategy {
 
     /// Require price to be on the "pullback" side of fast EMA
     pub require_pullback: bool,
+
+    /// Allow a band around fast EMA before treating it as "no pullback" (in ticks)
+    pub pullback_tolerance_ticks: f64,
 }
 
 impl MakerOnlyTrendFollowingStrategy {
@@ -44,6 +47,7 @@ impl MakerOnlyTrendFollowingStrategy {
             entry_threshold_ticks: 3.0,
             improve_if_possible: true,
             require_pullback: true,
+            pullback_tolerance_ticks: 2.0,
         }
     }
 }
@@ -94,11 +98,12 @@ impl Strategy for MakerOnlyTrendFollowingStrategy {
 
         let spread = best_ask - best_bid;
         let can_improve = self.improve_if_possible && spread >= 2.0 * tick;
+        let pullback_tolerance = self.pullback_tolerance_ticks * tick;
 
         if trend > 0.0 {
             // Uptrend → BUY on pullback
-            if self.require_pullback && mid > ema_fast {
-                return Ok(QuoteTarget::none());
+            if self.require_pullback && mid > ema_fast + pullback_tolerance {
+                return Err(NoQuoteReason::PullbackNotMet);
             }
 
             let mut desired_bid = best_bid;
@@ -125,8 +130,8 @@ impl Strategy for MakerOnlyTrendFollowingStrategy {
             })
         } else {
             // Downtrend → SELL on pullback
-            if self.require_pullback && mid < ema_fast {
-                return Ok(QuoteTarget::none());
+            if self.require_pullback && mid < ema_fast - pullback_tolerance {
+                return Err(NoQuoteReason::PullbackNotMet);
             }
 
             let mut desired_ask = best_ask;

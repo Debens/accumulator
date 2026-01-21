@@ -54,7 +54,7 @@ struct Args {
     #[arg(long, value_enum, default_value = "dry-run")]
     pub venue: VenueKind,
 
-    #[arg(long, value_enum, default_value = "mean-reversion")]
+    #[arg(long, value_enum, default_value = "regime-switch")]
     pub strategy: StrategyKind,
 
     #[arg(long, default_value = "SOL")]
@@ -70,8 +70,8 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::from_default_env()
-                .add_directive("accumulator=debug".parse().unwrap())
-                .add_directive("market=debug".parse().unwrap())
+                .add_directive("accumulator=info".parse().unwrap())
+                .add_directive("market=info".parse().unwrap())
                 .add_directive("execution=info".parse().unwrap()),
         )
         .with_target(false)
@@ -192,7 +192,7 @@ async fn main() -> Result<()> {
 
                 let target_result = strategy.compute_target(&market_state, &signal_state, inventory);
                 match target_result {
-                    Err(reason) => warn!(?reason),
+                    Err(reason) => warn!(?reason, "no quote"),
                     Ok(target) => {
                         let context = RiskContext {
                             instrument: &instrument,
@@ -213,13 +213,14 @@ async fn main() -> Result<()> {
                                 }
                             }
                             RiskDecision::Hold(hold) => {
-                                info!(reasons = ?hold.reasons, "throttling actions");
+                                info!(reasons = ?hold.reasons, target = ?target,  "risk hold");
                             }
                             RiskDecision::Rejected(rejection) => {
                                 warn!(
                                     reasons = ?rejection.reasons,
                                     required_actions = ?rejection.required_actions,
-                                    "risk rejected quote target"
+                                    target = ?target,
+                                    "risk rejection"
                                 );
 
                                 venue.execute(&rejection.required_actions).await?;

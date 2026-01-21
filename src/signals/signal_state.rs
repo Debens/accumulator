@@ -56,11 +56,11 @@ impl SignalState {
     }
 
     pub fn ema_mid(&self) -> Option<f64> {
-        self.last_ema_value
+        self.ema_mid.warmed_value()
     }
 
     pub fn ema_mid_slow(&self) -> Option<f64> {
-        self.last_ema_slow_value
+        self.ema_mid_slow.warmed_value()
     }
 
     pub fn volatility_mid(&self) -> Option<f64> {

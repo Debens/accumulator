@@ -61,7 +61,9 @@ impl Strategy for RegimeSwitchStrategy {
             .map(|p| p.as_f64())
             .ok_or(NoQuoteReason::MissingMid)?;
 
-        let ema_slow = signal_state.ema_mid_slow().ok_or(NoQuoteReason::MissingEma)?;
+        let ema_slow = signal_state
+            .ema_mid_slow()
+            .ok_or(NoQuoteReason::MissingSlowEma)?;
         let trend_abs = (mid - ema_slow).abs();
         let base_threshold = self.trend_threshold_ticks * self.ctx().tick();
         let vol_threshold = signal_state

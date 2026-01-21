@@ -53,7 +53,10 @@ impl SchedulePolicy for TopOfBookTickMovePolicy {
                 self.last_eval = Some(now);
                 return None;
             } else {
-                return Some(SkipReason::NoMeaningfulChange);
+                return Some(SkipReason::NoMeaningfulChange {
+                    best_bid: best_bid,
+                    best_ask: best_ask,
+                });
             }
         } else {
             self.last_eval = Some(now);

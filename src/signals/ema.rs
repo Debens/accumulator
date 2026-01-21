@@ -1,22 +1,31 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub struct Ema {
     tau_seconds: f64,
     value: Option<f64>,
     last_update: Option<Instant>,
+    first_update: Option<Instant>,
+    warmup_duration: Duration,
 }
 
 impl Ema {
     pub fn new(tau_seconds: f64) -> Self {
+        let warmup_duration = Duration::from_secs_f64((tau_seconds * 3.0).max(0.0));
         Self {
             tau_seconds,
             value: None,
             last_update: None,
+            first_update: None,
+            warmup_duration,
         }
     }
 
     pub fn update(&mut self, now: Instant, sample: f64) -> f64 {
+        if self.first_update.is_none() {
+            self.first_update = Some(now);
+        }
+
         match (self.value, self.last_update) {
             (None, _) => {
                 self.value = Some(sample);
@@ -38,5 +47,20 @@ impl Ema {
                 sample
             }
         }
+    }
+
+    pub fn warmed_value(&self) -> Option<f64> {
+        let Some(first) = self.first_update else {
+            return None;
+        };
+        let Some(last) = self.last_update else {
+            return None;
+        };
+
+        if last.duration_since(first) < self.warmup_duration {
+            return None;
+        }
+
+        self.value
     }
 }

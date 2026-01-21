@@ -21,24 +21,13 @@ pub enum NoQuoteReason {
     MissingFairPrice,
     MissingMid,
     MissingEma,
-    InsufficientInventory {
-        asset: String,
-        required: f64,
-        available: f64,
-    },
+    MissingSlowEma,
     BelowEntryThreshold {
         deviation_ticks: f64,
         threshold_ticks: f64,
     },
-    TooLongExposure {
-        exposure_quote: f64,
-        max_exposure_in_quote: f64,
-    },
-    TooShortExposure {
-        exposure_quote: f64,
-        max_exposure_in_quote: f64,
-    },
     InvalidQuantity,
     WouldCrossPostOnly,
     BothSidesSuppressedByExposure,
+    PullbackNotMet,
 }
