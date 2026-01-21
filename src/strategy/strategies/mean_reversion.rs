@@ -111,10 +111,10 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
                 return Err(NoQuoteReason::WouldCrossPostOnly);
             }
 
-            if desired_ask < inventory.base {
+            if quantity > inventory.base {
                 return Err(NoQuoteReason::InsufficientInventory {
                     asset: self.ctx().instrument.base().to_string(),
-                    required: desired_ask,
+                    required: quantity,
                     available: inventory.base,
                 });
             }
@@ -146,10 +146,11 @@ impl Strategy for MakerOnlyMeanReversionStrategy {
                 return Err(NoQuoteReason::WouldCrossPostOnly);
             }
 
-            if desired_bid > inventory.quote {
+            let notional = quantity * ema;
+            if notional > inventory.quote {
                 return Err(NoQuoteReason::InsufficientInventory {
                     asset: self.ctx().instrument.quote().to_string(),
-                    required: desired_bid,
+                    required: notional,
                     available: inventory.quote,
                 });
             }

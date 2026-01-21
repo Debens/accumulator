@@ -4,21 +4,37 @@ trading_rules:
     quantity_step: 0.00001
     min_half_spread: 2.50
     max_order_notional: 5.00
+    trading_hours:
+      start_hour: 8
+      end_hour: 20
+      weekend_pause: false
 
   SOL_GBP:
     price_tick: 0.01
     quantity_step: 0.01
     min_half_spread: 0.01
     max_order_notional: 5.00
+    trading_hours:
+      start_hour: 9
+      end_hour: 17
+      weekend_pause: true
 
   BTC_USD:
     price_tick: 0.1
     quantity_step: 0.00001
     min_half_spread: 2.50
     max_order_notional: 5.00
+    trading_hours:
+      start_hour: 6
+      end_hour: 22
+      weekend_pause: false
 
   SOL_USD:
     price_tick: 0.01
     quantity_step: 0.01
     min_half_spread: 0.01
     max_order_notional: 5.00
+    trading_hours:
+      start_hour: 8
+      end_hour: 18
+      weekend_pause: true

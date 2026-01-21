@@ -23,7 +23,9 @@ pub struct RiskRejection {
 pub enum RiskReason {
     KillSwitchEnabled,
     MarketDataStale,
+    MissingMarketData,
     CrossedOrInvalidBook,
     ChurnThrottleBid,
     ChurnThrottleAsk,
+    InsufficientEdge { half_spread: f64, required: f64 },
 }

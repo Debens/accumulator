@@ -88,12 +88,16 @@ async fn run_once(
             continue;
         };
 
-        let inv = Inventory {
-            base: pick_balance(&entries, base_codes),
-            quote: pick_balance(&entries, quote_codes),
-        };
+        let mut inventory = *tx.borrow();
 
-        let _ = tx.send(inv);
+        if let Some(base) = pick_balance(&entries, base_codes) {
+            inventory.base = base;
+        }
+        if let Some(quote) = pick_balance(&entries, quote_codes) {
+            inventory.quote = quote;
+        }
+
+        let _ = tx.send(inventory);
     }
 
     Ok(())
@@ -140,7 +144,7 @@ fn kraken_balance_codes(sym: &str) -> Vec<String> {
     }
 }
 
-fn pick_balance(entries: &[BalanceEntry], codes: &[String]) -> f64 {
+fn pick_balance(entries: &[BalanceEntry], codes: &[String]) -> Option<f64> {
     for code in codes {
         if let Some(e) = entries.iter().find(|e| e.asset.eq_ignore_ascii_case(code)) {
             if let Some(w) = e
@@ -148,11 +152,11 @@ fn pick_balance(entries: &[BalanceEntry], codes: &[String]) -> f64 {
                 .iter()
                 .find(|w| w.r#type == "spot" && w.id == "main")
             {
-                return w.balance;
+                return Some(w.balance);
             }
-
-            return e.balance;
+            return Some(e.balance);
         }
     }
-    0.0
+
+    None
 }

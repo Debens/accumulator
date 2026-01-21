@@ -26,6 +26,7 @@ use crate::execution::order_report::OrderReport;
 use crate::kraken::kraken_market::KrakenMarket;
 use crate::market::market_source::MarketDataSource;
 use crate::market::market_state::MarketState;
+use crate::risk::checks::min_edge::MinEdgeCheck;
 use crate::risk::checks::{
     churn_throttle::ChurnThrottleCheck, kill_switch::KillSwitchCheck,
     market_freshness::MarketFreshnessCheck, market_sanity::MarketSanityCheck,
@@ -37,8 +38,9 @@ use crate::scenario::scenario::Scenario;
 use crate::scenario::strategies::StrategyKind;
 use crate::scenario::venues::VenueKind;
 use crate::scheduling::policies::in_flight_policy::InFlightPolicy;
-use crate::scheduling::policies::min_interval_policy::MinIntervalPolicy;
+use crate::scheduling::policies::min_interval_policy::{self, MinIntervalPolicy};
 use crate::scheduling::policies::top_of_book_tick_move_policy::TopOfBookTickMovePolicy;
+use crate::scheduling::policies::trading_hours_policy::TradingHoursPolicy;
 use crate::scheduling::quote_scheduler::QuoteScheduler;
 use crate::scheduling::schedule_context::ScheduleContext;
 use crate::scheduling::types::ScheduleDecision;
@@ -127,15 +129,20 @@ async fn main() -> Result<()> {
         Box::new(MarketFreshnessCheck::new(Duration::from_secs(3))),
         Box::new(MarketSanityCheck::new()),
         Box::new(ChurnThrottleCheck::new(Duration::from_millis(800))),
+        Box::new(MinEdgeCheck::for_instrument(&instrument)),
     ]);
 
     let mut market_state = MarketState::new();
     let mut signal_state = Scenario::signals(args.strategy);
 
+    let min_interval_policy = MinIntervalPolicy::new(Duration::from_millis(200));
+    min_interval_policy.subscribe(order_report_sender.subscribe());
+
     let mut quote_scheduler = QuoteScheduler::new(vec![
         Box::new(InFlightPolicy),
         Box::new(TopOfBookTickMovePolicy::new(1.0)),
-        Box::new(MinIntervalPolicy::new(Duration::from_millis(200))),
+        Box::new(TradingHoursPolicy::for_instrument(&instrument)),
+        Box::new(min_interval_policy),
     ]);
 
     loop {

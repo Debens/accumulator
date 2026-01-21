@@ -12,4 +12,6 @@ pub enum SkipReason {
     NoMeaningfulChange,
     NoBook,
     InFlight,
+    OutOfTradingHours { start_hour: u8, end_hour: u8 },
+    WeekendPause,
 }

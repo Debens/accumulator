@@ -1,4 +1,5 @@
 use crate::types::price::Price;
+use crate::types::trading_hours::TradingHours;
 
 use anyhow::{anyhow, bail, Context, Result};
 use once_cell::sync::OnceCell;
@@ -19,6 +20,10 @@ pub struct TradingRules {
 
     /// Max notional per order in quote currency (GBP). Keeps risk stable as price moves.
     pub max_order_notional: f64,
+
+    /// Optional trading hours restriction (UTC)
+    #[serde(default)]
+    pub trading_hours: Option<TradingHours>,
 }
 
 impl TradingRules {
