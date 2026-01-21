@@ -26,6 +26,10 @@ pub enum NoQuoteReason {
         deviation_ticks: f64,
         threshold_ticks: f64,
     },
+    BelowTrendSlopeThreshold {
+        slope_ticks: f64,
+        threshold_ticks: f64,
+    },
     InvalidQuantity,
     WouldCrossPostOnly,
     BothSidesSuppressedByExposure,

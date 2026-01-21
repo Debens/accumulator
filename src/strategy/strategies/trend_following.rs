@@ -31,6 +31,12 @@ pub struct MakerOnlyTrendFollowingStrategy {
     /// Minimum deviation from slow EMA required to trade (in ticks)
     pub entry_threshold_ticks: f64,
 
+    /// Extra entry threshold scaled by recent volatility (price units per tick)
+    pub volatility_entry_multiplier: f64,
+
+    /// Minimum fast/slow EMA separation required to trade (in ticks)
+    pub slope_threshold_ticks: f64,
+
     /// Require price to be on the "pullback" side of fast EMA
     pub require_pullback: bool,
 
@@ -45,6 +51,8 @@ impl MakerOnlyTrendFollowingStrategy {
             ctx: InstrumentContext::new(instrument),
             max_exposure_in_quote,
             entry_threshold_ticks: 3.0,
+            volatility_entry_multiplier: 1.0,
+            slope_threshold_ticks: 2.0,
             improve_if_possible: true,
             require_pullback: true,
             pullback_tolerance_ticks: 2.0,
@@ -81,11 +89,24 @@ impl Strategy for MakerOnlyTrendFollowingStrategy {
 
         let trend = mid - ema_slow;
         let trend_abs = trend.abs();
-        let threshold_abs = self.entry_threshold_ticks * tick;
+        let vol_threshold = signal_state
+            .volatility_mid()
+            .unwrap_or(0.0)
+            * self.volatility_entry_multiplier;
+        let threshold_abs = self.entry_threshold_ticks * tick + vol_threshold;
         if trend_abs < threshold_abs {
             return Err(NoQuoteReason::BelowEntryThreshold {
                 deviation_ticks: trend_abs / tick,
-                threshold_ticks: self.entry_threshold_ticks,
+                threshold_ticks: threshold_abs / tick,
+            });
+        }
+
+        let slope_abs = (ema_fast - ema_slow).abs();
+        let slope_threshold_abs = self.slope_threshold_ticks * tick;
+        if slope_threshold_abs > 0.0 && slope_abs < slope_threshold_abs {
+            return Err(NoQuoteReason::BelowTrendSlopeThreshold {
+                slope_ticks: slope_abs / tick,
+                threshold_ticks: self.slope_threshold_ticks,
             });
         }
 

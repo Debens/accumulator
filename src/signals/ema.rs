@@ -11,7 +11,7 @@ pub struct Ema {
 
 impl Ema {
     pub fn new(tau_seconds: f64) -> Self {
-        let warmup_duration = Duration::from_secs_f64((tau_seconds * 3.0).max(0.0));
+        let warmup_duration = Duration::from_secs_f64((tau_seconds * 1.0).max(0.0));
         Self {
             tau_seconds,
             value: None,
