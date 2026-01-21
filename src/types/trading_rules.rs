@@ -21,6 +21,9 @@ pub struct TradingRules {
     /// Max notional per order in quote currency (GBP). Keeps risk stable as price moves.
     pub max_order_notional: f64,
 
+    /// Max absolute exposure in quote currency (GBP).
+    pub max_exposure_in_quote: f64,
+
     /// Optional trading hours restriction (UTC)
     #[serde(default)]
     pub trading_hours: Option<TradingHours>,
@@ -64,6 +67,9 @@ impl TradingRules {
         }
         if self.max_order_notional <= 0.0 {
             bail!("max_order_notional must be > 0");
+        }
+        if self.max_exposure_in_quote <= 0.0 {
+            bail!("max_exposure_in_quote must be > 0");
         }
         Ok(())
     }

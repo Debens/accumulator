@@ -1,13 +1,15 @@
 use anyhow::Result;
 
 use crate::{
-    execution::{ExecutionVenue, ReportSender, dry_run::DryRunExecutionVenue},
+    execution::{dry_run::DryRunExecutionVenue, ExecutionVenue, ReportSender},
     kraken::{kraken_config::KrakenConfig, kraken_venue::KrakenExecutionVenue},
     scenario::{strategies::StrategyKind, venues::VenueKind},
     signals::signal_state::SignalState,
     strategy::{
         strategies::{
-            mean_reversion::MakerOnlyMeanReversionStrategy, simple_mm::SimpleMarketMakerStrategy,
+            mean_reversion::MakerOnlyMeanReversionStrategy, regime_switch::RegimeSwitchStrategy,
+            simple_mm::SimpleMarketMakerStrategy,
+            trend_following::MakerOnlyTrendFollowingStrategy,
         },
         strategy::Strategy,
     },
@@ -44,13 +46,19 @@ impl Scenario {
             StrategyKind::MeanReversion => {
                 Box::new(MakerOnlyMeanReversionStrategy::for_instrument(instrument))
             }
+            StrategyKind::TrendFollowing => {
+                Box::new(MakerOnlyTrendFollowingStrategy::for_instrument(instrument))
+            }
+            StrategyKind::RegimeSwitch => Box::new(RegimeSwitchStrategy::for_instrument(instrument)),
         }
     }
 
     pub fn signals(kind: StrategyKind) -> SignalState {
         match kind {
-            StrategyKind::SimpleMarketMaker => SignalState::new(3.0),
-            StrategyKind::MeanReversion => SignalState::new(60.0),
+            StrategyKind::SimpleMarketMaker => SignalState::new(3.0, 3.0, 10.0),
+            StrategyKind::MeanReversion => SignalState::new(60.0, 600.0, 60.0),
+            StrategyKind::TrendFollowing => SignalState::new(60.0, 600.0, 60.0),
+            StrategyKind::RegimeSwitch => SignalState::new(60.0, 600.0, 60.0),
         }
     }
 }

@@ -17,21 +17,25 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct SimpleMarketMakerStrategy {
     ctx: InstrumentContext,
-    pub max_exposure_quote: f64,
+    pub max_exposure_in_quote: f64,
     pub max_skew_bps: f64,
 }
 
 impl SimpleMarketMakerStrategy {
-    pub fn new(instrument: &Instrument, max_exposure_quote: f64, max_skew_bps: f64) -> Self {
+    pub fn new(instrument: &Instrument, max_exposure_in_quote: f64, max_skew_bps: f64) -> Self {
         Self {
             ctx: InstrumentContext::new(instrument),
-            max_exposure_quote,
+            max_exposure_in_quote,
             max_skew_bps,
         }
     }
 
     pub fn for_instrument(instrument: &Instrument) -> Self {
-        Self::new(instrument, 200.0, 10.0)
+        Self::new(
+            instrument,
+            instrument.trading_rules().max_exposure_in_quote,
+            10.0,
+        )
     }
 }
 
@@ -62,7 +66,7 @@ impl Strategy for SimpleMarketMakerStrategy {
         let exposure_quote = inventory.base * fair;
 
         // Normalize exposure into [-1, 1] relative to max exposure cap.
-        let denom = self.max_exposure_quote.max(1e-12);
+        let denom = self.max_exposure_in_quote.max(1e-12);
         let norm = (exposure_quote / denom).clamp(-1.0, 1.0);
 
         // Positive exposure => skew fair downward to encourage sells.
@@ -79,14 +83,14 @@ impl Strategy for SimpleMarketMakerStrategy {
         }
 
         // ----- one-sided quoting if exposure is too large -----
-        let too_long = exposure_quote > self.max_exposure_quote;
-        let too_short = exposure_quote < -self.max_exposure_quote;
+        let too_long = exposure_quote > self.max_exposure_in_quote;
+        let too_short = exposure_quote < -self.max_exposure_in_quote;
 
         // If you prefer hard-stop reasons (instead of just suppressing one side),
         // you can return these immediately:
         //
-        // if too_long { return Err(NoQuoteReason::TooLongExposure { exposure_quote, max_exposure_quote: self.max_exposure_quote }); }
-        // if too_short { return Err(NoQuoteReason::TooShortExposure { exposure_quote, max_exposure_quote: self.max_exposure_quote }); }
+        // if too_long { return Err(NoQuoteReason::TooLongExposure { exposure_quote, max_exposure_in_quote: self.max_exposure_in_quote }); }
+        // if too_short { return Err(NoQuoteReason::TooShortExposure { exposure_quote, max_exposure_in_quote: self.max_exposure_in_quote }); }
 
         // ----- price selection: quote at/near the touch -----
         let spread = best_ask - best_bid;

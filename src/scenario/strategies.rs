@@ -10,6 +10,10 @@ pub enum StrategyKind {
     SimpleMarketMaker,
     #[clap(name = "mean-reversion")]
     MeanReversion,
+    #[clap(name = "trend-following")]
+    TrendFollowing,
+    #[clap(name = "regime-switch")]
+    RegimeSwitch,
 }
 
 impl fmt::Display for StrategyKind {
@@ -17,6 +21,8 @@ impl fmt::Display for StrategyKind {
         match self {
             Self::SimpleMarketMaker => write!(f, "simple-mm"),
             Self::MeanReversion => write!(f, "mean-reversion"),
+            Self::TrendFollowing => write!(f, "trend-following"),
+            Self::RegimeSwitch => write!(f, "regime-switch"),
         }
     }
 }
@@ -28,6 +34,8 @@ impl FromStr for StrategyKind {
         match s {
             "simple-mm" => Ok(Self::SimpleMarketMaker),
             "mean-reversion" => Ok(Self::MeanReversion),
+            "trend-following" => Ok(Self::TrendFollowing),
+            "regime-switch" => Ok(Self::RegimeSwitch),
             other => Err(anyhow!("unknown strategy kind: {other}")),
         }
     }

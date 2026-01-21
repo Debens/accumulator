@@ -32,11 +32,11 @@ pub enum NoQuoteReason {
     },
     TooLongExposure {
         exposure_quote: f64,
-        max_exposure_quote: f64,
+        max_exposure_in_quote: f64,
     },
     TooShortExposure {
         exposure_quote: f64,
-        max_exposure_quote: f64,
+        max_exposure_in_quote: f64,
     },
     InvalidQuantity,
     WouldCrossPostOnly,

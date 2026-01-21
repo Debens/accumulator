@@ -4,6 +4,7 @@ trading_rules:
     quantity_step: 0.00001
     min_half_spread: 2.50
     max_order_notional: 5.00
+    max_exposure_in_quote: 200.0
     trading_hours:
       start_hour: 8
       end_hour: 20
@@ -14,6 +15,7 @@ trading_rules:
     quantity_step: 0.01
     min_half_spread: 0.01
     max_order_notional: 5.00
+    max_exposure_in_quote: 200.0
     trading_hours:
       start_hour: 9
       end_hour: 17
@@ -24,6 +26,7 @@ trading_rules:
     quantity_step: 0.00001
     min_half_spread: 2.50
     max_order_notional: 5.00
+    max_exposure_in_quote: 200.0
     trading_hours:
       start_hour: 6
       end_hour: 22
@@ -34,6 +37,7 @@ trading_rules:
     quantity_step: 0.01
     min_half_spread: 0.01
     max_order_notional: 5.00
+    max_exposure_in_quote: 200.0
     trading_hours:
       start_hour: 8
       end_hour: 18

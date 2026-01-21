@@ -28,7 +28,8 @@ use crate::market::market_source::MarketDataSource;
 use crate::market::market_state::MarketState;
 use crate::risk::checks::min_edge::MinEdgeCheck;
 use crate::risk::checks::{
-    churn_throttle::ChurnThrottleCheck, kill_switch::KillSwitchCheck,
+    churn_throttle::ChurnThrottleCheck, exposure_limit::ExposureLimitCheck,
+    inventory_available::InventoryAvailableCheck, kill_switch::KillSwitchCheck,
     market_freshness::MarketFreshnessCheck, market_sanity::MarketSanityCheck,
 };
 use crate::risk::context::RiskContext;
@@ -124,12 +125,16 @@ async fn main() -> Result<()> {
     venue.execute(STARTUP_ACTIONS).await?;
 
     let strategy = Scenario::strategy(args.strategy, &instrument);
+    let max_exposure_in_quote = instrument.trading_rules().max_exposure_in_quote;
+
     let mut risk_engine = RiskEngine::new(vec![
         Box::new(KillSwitchCheck::new(false)),
         Box::new(MarketFreshnessCheck::new(Duration::from_secs(3))),
         Box::new(MarketSanityCheck::new()),
         Box::new(ChurnThrottleCheck::new(Duration::from_millis(800))),
         Box::new(MinEdgeCheck::for_instrument(&instrument)),
+        Box::new(ExposureLimitCheck::new(max_exposure_in_quote)),
+        Box::new(InventoryAvailableCheck::new()),
     ]);
 
     let mut market_state = MarketState::new();
@@ -193,6 +198,7 @@ async fn main() -> Result<()> {
                             instrument: &instrument,
                             market_state: &market_state,
                             target: &target,
+                            inventory,
                             now,
                         };
 
